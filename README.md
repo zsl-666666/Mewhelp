@@ -170,7 +170,7 @@ uv run python -m evals.eval_structured
 - 结构化提取的真实模型返回；
 - `evals.eval_structured` 的通过率。
 
-离线单元测试已通过（45 项）。配置 `.env` 后可按上文命令完成实机验收。
+离线单元测试已通过（47 项）。配置 `.env` 后可按上文命令完成实机验收。
 
 ## 已知限制
 
