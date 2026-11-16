@@ -1,5 +1,6 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from app.prompts.after_sales import AFTER_SALES_SYSTEM_PROMPT
 from app.schemas import AfterSalesExtraction
 from app.services.extract import extract_after_sales
 from tests.fakes import FakeStructuredModel, make_settings
@@ -43,5 +44,6 @@ async def test_extract_builds_system_and_user_messages():
     )
     await extract_after_sales("请问支持退货吗", model, make_settings())
     assert isinstance(model.runnable.messages[0], SystemMessage)
+    assert model.runnable.messages[0].content == AFTER_SALES_SYSTEM_PROMPT
     assert isinstance(model.runnable.messages[1], HumanMessage)
     assert model.runnable.messages[1].content == "请问支持退货吗"

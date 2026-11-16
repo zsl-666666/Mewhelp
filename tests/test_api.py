@@ -72,6 +72,18 @@ def test_extract_returns_502_on_failure(client):
     assert response.json()["detail"] == "结构化提取失败，请稍后重试"
 
 
+def test_extract_returns_502_on_validation_failure(client):
+    app.dependency_overrides[get_chat_model] = lambda: FakeStructuredModel(
+        result={"request_type": "not-a-type"}
+    )
+    response = client.post(
+        "/api/after-sales/extract",
+        json={"text": "订单 A1 要退货"},
+    )
+    assert response.status_code == 502
+    assert response.json()["detail"] == "结构化提取失败，请稍后重试"
+
+
 def test_extract_rejects_blank_text(client):
     fake = FakeStructuredModel(
         result={"order_id": None, "request_type": "咨询", "expected_solution": None}
