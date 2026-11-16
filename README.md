@@ -64,7 +64,7 @@ uv run uvicorn app.main:app --reload --port 8000
 | GPT | `https://api.openai.com/v1` | `gpt-4o-mini` | 官方兼容端点 |
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | 官方兼容端点 |
 | Ollama | `http://127.0.0.1:11434/v1` | `qwen2.5:7b` | 本地服务；需支持工具调用才能使用默认结构化输出 |
-| Claude（经网关） | 网关地址，如 OpenRouter / LiteLLM / one-api | 网关提供的 Claude 模型名 | 应用不直连 Anthropic，走 OpenAI 兼容网关 |
+| Claude（经网关） | `https://openrouter.ai/api/v1`（或 LiteLLM / one-api 网关地址） | `anthropic/claude-sonnet-4`（以网关为准） | 应用不直连 Anthropic，走 OpenAI 兼容网关 |
 
 > 模型名以供应商当前文档为准；表中仅为示例，供应商可能调整或下线模型。
 
@@ -79,18 +79,20 @@ uv run uvicorn app.main:app --reload --port 8000
 ```bash
 curl -N -X POST http://127.0.0.1:8000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"你们支持七天无理由退货吗？"}]}'
+  -d '{"messages":[{"role":"user","content":"我买的蓝牙耳机想退货，订单号 20261116001。"}]}'
 ```
 
 预期看到多条增量帧，最后以结束帧收尾：
 
 ```text
-data: {"delta": "支持"}
-data: {"delta": "的，签收后……"}
+data: {"delta": "好的"}
+data: {"delta": "，已记录您的退货意向。"}
 data: {"done": true, "trimmed": false}
 ```
 
 `trimmed` 为 `true` 表示历史因 token 预算被裁剪。
+
+流式过程中上游异常时，HTTP 状态仍为 200，但会发送 `event: error` 和 `data: {"code":"upstream_error","message":"..."}` 后关闭；下一页结构化提取接口的失败才是 502。
 
 ### 2. 第二轮对话（验证上下文）
 
