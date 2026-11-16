@@ -18,8 +18,10 @@ class FakeStreamModel:
     def __init__(self, chunks, error_after=None):
         self.chunks = chunks
         self.error_after = error_after
+        self.messages = None
 
     async def astream(self, messages):
+        self.messages = messages
         for index, content in enumerate(self.chunks):
             if self.error_after is not None and index == self.error_after:
                 raise RuntimeError("upstream exploded")

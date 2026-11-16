@@ -18,6 +18,9 @@ def test_chat_returns_sse_stream(client):
     ) as response:
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/event-stream")
+        assert response.headers["cache-control"] == "no-cache"
+        assert response.headers["connection"] == "keep-alive"
+        assert response.headers["x-accel-buffering"] == "no"
         body = "".join(response.iter_text())
     assert 'data: {"delta": "你"}' in body
     assert 'data: {"done": true, "trimmed": false}' in body

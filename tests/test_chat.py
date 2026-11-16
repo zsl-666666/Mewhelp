@@ -1,7 +1,45 @@
-from langchain_core.messages import AIMessageChunk, HumanMessage
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    HumanMessage,
+    SystemMessage,
+)
 
-from app.services.chat import extract_text, stream_chat
+from app.schemas import ChatMessage
+from app.services.chat import extract_text, stream_chat, to_lc_message
 from tests.fakes import FakeStreamModel, make_settings
+
+
+def test_to_lc_message_maps_roles():
+    user_message = to_lc_message(ChatMessage(role="user", content="你好"))
+    assistant_message = to_lc_message(ChatMessage(role="assistant", content="您好"))
+    assert isinstance(user_message, HumanMessage)
+    assert user_message.content == "你好"
+    assert isinstance(assistant_message, AIMessage)
+    assert assistant_message.content == "您好"
+
+
+async def test_stream_chat_passes_system_prompt_and_trimmed_history():
+    model = FakeStreamModel(["好"])
+    settings = make_settings()
+    history = [HumanMessage(content="hi")]
+    async for _ in stream_chat(history, model, settings):
+        pass
+    assert isinstance(model.messages[0], SystemMessage)
+    assert settings.company_name in model.messages[0].content
+    assert model.messages[1:] == history
+
+
+async def test_stream_chat_reports_trimmed_history():
+    model = FakeStreamModel(["好"])
+    settings = make_settings(context_token_budget=1)
+    history = [
+        HumanMessage(content="word " * 50),
+        AIMessage(content="answer " * 50),
+        HumanMessage(content="latest question " * 50),
+    ]
+    frames = [frame async for frame in stream_chat(history, model, settings)]
+    assert frames[-1] == 'data: {"done": true, "trimmed": true}\n\n'
 
 
 def test_extract_text_handles_string_and_list_content():
