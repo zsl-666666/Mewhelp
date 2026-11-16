@@ -50,6 +50,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "langchain-core" },
     { name = "langchain-openai" },
+    { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -66,6 +67,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.163.1" },
     { name = "langchain-core", specifier = ">=1.8.1" },
     { name = "langchain-openai", specifier = ">=1.8.0" },
+    { name = "pydantic", specifier = ">=2.14.3" },
     { name = "pydantic-settings", specifier = ">=2.16.3" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
 ]

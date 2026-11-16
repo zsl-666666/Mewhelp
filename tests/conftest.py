@@ -1,8 +1,15 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import Settings, get_settings
-from app.main import app
+# app.main 的 lifespan 会在启动时解析配置；离线测试需要先提供必填环境变量。
+os.environ.setdefault("LLM_BASE_URL", "https://example.com/v1")
+os.environ.setdefault("LLM_API_KEY", "test-key")
+os.environ.setdefault("LLM_MODEL", "test-model")
+
+from app.config import Settings, get_settings  # noqa: E402
+from app.main import app  # noqa: E402
 
 
 @pytest.fixture

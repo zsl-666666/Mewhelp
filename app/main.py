@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -15,7 +16,15 @@ logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
 
-app = FastAPI(title="电商智能客服")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 缺少必填配置时在启动阶段直接失败，而不是等到首个请求才报 500。
+    get_settings()
+    yield
+
+
+app = FastAPI(title="电商智能客服", lifespan=lifespan)
 
 
 @app.get("/", response_class=FileResponse)

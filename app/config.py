@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 60.0
     context_token_budget: int = 3000
     structured_output_method: Literal[
-        "function_calling", "json_schema", "json_mode"
+        "function_calling", "json_schema"
     ] = "function_calling"
     company_name: str = "好物商城"
     service_hours: str = "9:00-21:00"

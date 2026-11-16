@@ -80,7 +80,15 @@ async def main() -> int:
 
     results = []
     for case in cases:
-        extraction = await extract_after_sales(case["text"], model, settings)
+        try:
+            extraction = await extract_after_sales(case["text"], model, settings)
+        except Exception as error:
+            print(f"id={case['id']}")
+            print(f"  error   ={type(error).__name__}")
+            results.append(
+                {field: False for field in THRESHOLDS} | {"error": type(error).__name__}
+            )
+            continue
         actual = extraction.model_dump()
         scores = score_case(case, actual)
         results.append(scores)

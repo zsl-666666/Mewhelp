@@ -32,6 +32,7 @@ dev-notes/             开发过程记录
 ```bash
 uv sync
 cp .env.example .env
+# Windows cmd 用户请改用 copy .env.example .env（或直接使用 Git Bash）
 # 编辑 .env，至少填写 LLM_BASE_URL、LLM_API_KEY、LLM_MODEL
 uv run uvicorn app.main:app --reload --port 8000
 ```
@@ -52,7 +53,7 @@ uv run uvicorn app.main:app --reload --port 8000
 | `LLM_MAX_TOKENS` | 否 | 默认 `1024` |
 | `LLM_TIMEOUT_SECONDS` | 否 | 默认 `60` |
 | `CONTEXT_TOKEN_BUDGET` | 否 | 历史裁剪预算，默认 `3000`（近似值） |
-| `STRUCTURED_OUTPUT_METHOD` | 否 | `function_calling`（默认）/ `json_schema` / `json_mode` |
+| `STRUCTURED_OUTPUT_METHOD` | 否 | `function_calling`（默认）/ `json_schema` |
 | `COMPANY_NAME` / `SERVICE_HOURS` / `RETURN_WINDOW_DAYS` | 否 | 客服 Prompt 中的品牌与服务政策信息 |
 
 ## Provider 切换
@@ -175,7 +176,7 @@ uv run python -m evals.eval_structured
 
 - token 估算使用 LangChain 的近似计数，不是上游 tokenizer 的精确值；历史裁剪可能偏保守或偏宽松。
 - 流式粒度由上游决定，可能一次返回多个 token，不保证严格逐字。
-- 默认结构化输出方式为 `function_calling`；Ollama 模型需支持工具调用。切换 `json_schema` / `json_mode` 时，需确认上游支持对应能力。
+- 默认结构化输出方式为 `function_calling`；Ollama 模型需支持工具调用。切换 `json_schema` 时，需确认上游支持对应能力。
 - 聊天页为最小演示，无登录、会话持久化、Markdown 渲染和移动端深度适配。
 - 接口无鉴权与限流，仅适合本地开发与课程演示，不可直接暴露到公网。
 

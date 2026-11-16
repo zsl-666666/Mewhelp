@@ -12,7 +12,7 @@ def build_chat_model(settings: Settings) -> ChatOpenAI:
         temperature=settings.llm_temperature,
         max_tokens=settings.llm_max_tokens,
         timeout=settings.llm_timeout_seconds,
-        max_retries=2,
+        max_retries=0,
     )
 
 
