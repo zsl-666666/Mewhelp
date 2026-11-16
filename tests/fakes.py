@@ -26,3 +26,29 @@ class FakeStreamModel:
             if self.error_after is not None and index == self.error_after:
                 raise RuntimeError("upstream exploded")
             yield AIMessageChunk(content=content)
+
+
+class FakeStructuredRunnable:
+    def __init__(self, result=None, error=None):
+        self.result = result
+        self.error = error
+        self.messages = None
+
+    async def ainvoke(self, messages):
+        self.messages = messages
+        if self.error:
+            raise self.error
+        return self.result
+
+
+class FakeStructuredModel:
+    def __init__(self, result=None, error=None):
+        self.result = result
+        self.error = error
+        self.calls = []
+        self.runnable = None
+
+    def with_structured_output(self, schema, method=None):
+        self.calls.append((schema, method))
+        self.runnable = FakeStructuredRunnable(self.result, self.error)
+        return self.runnable

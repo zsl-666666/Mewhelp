@@ -1,11 +1,16 @@
-from fastapi import Depends, FastAPI
+import logging
+
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.language_models import BaseChatModel
 
 from app.config import Settings, get_settings
 from app.llm import get_chat_model
-from app.schemas import ChatRequest
+from app.schemas import AfterSalesExtraction, AfterSalesRequest, ChatRequest
 from app.services.chat import stream_chat, to_lc_message
+from app.services.extract import extract_after_sales
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="电商智能客服")
 
@@ -31,3 +36,19 @@ async def chat(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.post("/api/after-sales/extract", response_model=AfterSalesExtraction)
+async def after_sales_extract(
+    request: AfterSalesRequest,
+    model: BaseChatModel = Depends(get_chat_model),
+    settings: Settings = Depends(get_settings),
+) -> AfterSalesExtraction:
+    try:
+        return await extract_after_sales(request.text, model, settings)
+    except Exception:
+        logger.exception("structured extraction failed")
+        raise HTTPException(
+            status_code=502,
+            detail="结构化提取失败，请稍后重试",
+        )
