@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -6,6 +7,8 @@ from langchain_core.messages.utils import (
     count_tokens_approximately,
     trim_messages,
 )
+
+logger = logging.getLogger(__name__)
 
 TokenCounter = Callable[[list[BaseMessage]], int]
 
@@ -40,6 +43,7 @@ def trim_history(
     )
 
     if not result or result[-1] != messages[-1]:
-        return TrimmedHistory([messages[-1]], True)
+        logger.warning("latest message exceeds context token budget; sending without history")
+        return TrimmedHistory([messages[-1]], len(messages) > 1)
 
     return TrimmedHistory(result, len(result) != len(messages))

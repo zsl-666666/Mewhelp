@@ -41,6 +41,13 @@ def test_latest_user_message_is_kept_even_if_over_budget():
     assert result.trimmed is True
 
 
+def test_single_over_budget_message_is_not_trimmed():
+    messages = [HumanMessage(content="x" * 200)]
+    result = trim_history(messages, max_tokens=10, token_counter=char_counter)
+    assert result.messages == [messages[-1]]
+    assert result.trimmed is False
+
+
 def test_empty_messages_raises():
     with pytest.raises(ValueError):
         trim_history([], max_tokens=10, token_counter=char_counter)
