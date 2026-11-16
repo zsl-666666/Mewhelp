@@ -1,0 +1,15 @@
+{"id":"c01","text":"订单号 20231116001，收到的杯子是破的，我想退货退款。","expected":{"order_id":"20231116001","request_type":"退货","solution_keywords":["退货","退款"]}}
+{"id":"c02","text":"我的订单 A123456 一直没发货，我不想等了，申请仅退款。","expected":{"order_id":"A123456","request_type":"退款","solution_keywords":["退款"]}}
+{"id":"c03","text":"买的鞋子尺码小了，想换大一码，订单号是 DD20241116001。","expected":{"order_id":"DD20241116001","request_type":"换货","solution_keywords":["换"]}}
+{"id":"c04","text":"订单 20231116002 的耳机左耳没声音，还在保修期内，想维修。","expected":{"order_id":"20231116002","request_type":"维修","solution_keywords":["维修"]}}
+{"id":"c05","text":"订单 20231116003 三天了还没发货，麻烦帮我催一下。","expected":{"order_id":"20231116003","request_type":"物流","solution_keywords":["催"]}}
+{"id":"c06","text":"请问你们支持七天无理由退货吗？","expected":{"order_id":null,"request_type":"咨询","solution_keywords":[]}}
+{"id":"c07","text":"订单 20231116004 的玻璃杯碎了，我要退货。","expected":{"order_id":"20231116004","request_type":"退货","solution_keywords":["退货"]}}
+{"id":"c08","text":"你们的东西质量太差了，我很失望。","expected":{"order_id":null,"request_type":"其他","solution_keywords":[]}}
+{"id":"c09","text":"订单 20231116005 的奶粉和描述不符，我要退款。","expected":{"order_id":"20231116005","request_type":"退款","solution_keywords":["退款"]}}
+{"id":"c10","text":"订单 20231116006 的外套拉链坏了，能换一件新的吗？","expected":{"order_id":"20231116006","request_type":"换货","solution_keywords":["换"]}}
+{"id":"c11","text":"我的快递到哪了？单号 20231116007。","expected":{"order_id":"20231116007","request_type":"物流","solution_keywords":[]}}
+{"id":"c12","text":"订单 20231116008 买了两件，想开一张发票。","expected":{"order_id":"20231116008","request_type":"咨询","solution_keywords":["发票"]}}
+{"id":"c13","text":"订单 20231116009 的衣服穿了不合适，七天无理由退货。","expected":{"order_id":"20231116009","request_type":"退货","solution_keywords":["退货"]}}
+{"id":"c14","text":"我的耳机坏了，不知道能不能修，订单号 20231116010。","expected":{"order_id":"20231116010","request_type":"维修","solution_keywords":["修"]}}
+{"id":"c15","text":"订单 20231116011 的台灯不亮了，我要退货退款，请尽快处理。","expected":{"order_id":"20231116011","request_type":"退货","solution_keywords":["退货","退款"]}}
