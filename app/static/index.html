@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电商智能客服</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #eef2f7;
+    color: #1f2937;
+  }
+  .chat {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 760px;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 0 24px rgba(15, 23, 42, 0.08);
+  }
+  .chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .chat-header h1 { margin: 0; font-size: 18px; }
+  .subtitle { margin: 4px 0 0; font-size: 12px; color: #64748b; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+  }
+  button:disabled { cursor: not-allowed; opacity: 0.55; }
+  .clear {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #475569;
+    background: #f1f5f9;
+  }
+  .clear:hover:not(:disabled) { background: #e2e8f0; }
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+  }
+  .empty { margin: auto; color: #94a3b8; font-size: 14px; }
+  .bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .bubble.user {
+    align-self: flex-end;
+    background: #2563eb;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .bubble.assistant {
+    align-self: flex-start;
+    background: #f1f5f9;
+    color: #0f172a;
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.assistant.streaming:empty::after {
+    content: "…";
+    color: #64748b;
+  }
+  .status {
+    min-height: 20px;
+    margin: 0;
+    padding: 0 20px 8px;
+    font-size: 13px;
+    color: #b45309;
+  }
+  .composer {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px 18px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .composer textarea {
+    flex: 1;
+    resize: none;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 15px;
+    color: #1f2937;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    outline: none;
+  }
+  .composer textarea:focus { border-color: #2563eb; }
+  .send {
+    padding: 0 22px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: #2563eb;
+  }
+  .send:hover:not(:disabled) { background: #1d4ed8; }
+</style>
+</head>
+<body>
+<main class="chat">
+  <header class="chat-header">
+    <div>
+      <h1>电商智能客服</h1>
+      <p class="subtitle">在线咨询服务</p>
+    </div>
+    <button id="clear" class="clear" type="button">清空对话</button>
+  </header>
+
+  <section id="messages" class="messages" aria-live="polite" aria-label="对话记录">
+    <p id="empty" class="empty">您好，请问有什么可以帮您？</p>
+  </section>
+
+  <p id="status" class="status" role="status"></p>
+
+  <form id="composer" class="composer">
+    <textarea id="input" rows="2" placeholder="请输入您的问题，Enter 发送，Shift+Enter 换行" aria-label="输入消息"></textarea>
+    <button id="send" class="send" type="submit">发送</button>
+  </form>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var messagesEl = document.getElementById("messages");
+  var emptyEl = document.getElementById("empty");
+  var statusEl = document.getElementById("status");
+  var formEl = document.getElementById("composer");
+  var inputEl = document.getElementById("input");
+  var sendBtn = document.getElementById("send");
+  var clearBtn = document.getElementById("clear");
+
+  var messages = [];
+  var streaming = false;
+
+  function setStatus(text) {
+    statusEl.textContent = text || "";
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function addBubble(role, text) {
+    emptyEl.hidden = true;
+    var bubble = document.createElement("div");
+    bubble.className = "bubble " + role;
+    bubble.textContent = text || "";
+    messagesEl.appendChild(bubble);
+    scrollToBottom();
+    return bubble;
+  }
+
+  function setBusy(busy) {
+    streaming = busy;
+    sendBtn.disabled = busy;
+    clearBtn.disabled = busy;
+  }
+
+  function applyFrame(frame, state) {
+    var eventName = "message";
+    var dataLines = [];
+
+    frame.split(/\r?\n/).forEach(function (line) {
+      if (line.indexOf("event:") === 0) {
+        eventName = line.slice(6).trim();
+      } else if (line.indexOf("data:") === 0) {
+        var value = line.slice(5);
+        if (value.charAt(0) === " ") {
+          value = value.slice(1);
+        }
+        dataLines.push(value);
+      }
+    });
+
+    if (dataLines.length === 0) {
+      return;
+    }
+
+    var payload;
+    try {
+      payload = JSON.parse(dataLines.join("\n"));
+    } catch (error) {
+      return;
+    }
+
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+
+    if (eventName === "error") {
+      var detail = typeof payload.message === "string" ? payload.message.trim() : "";
+      state.error = detail ? detail.slice(0, 300) : "模型服务暂时不可用，请稍后重试";
+      return;
+    }
+
+    if (typeof payload.delta === "string") {
+      state.text += payload.delta;
+      state.bubble.textContent = state.text;
+      scrollToBottom();
+    }
+
+    if (payload.done === true) {
+      state.done = true;
+      state.trimmed = payload.trimmed === true;
+    }
+  }
+
+  async function readError(response) {
+    try {
+      var data = await response.json();
+      if (typeof data.detail === "string") {
+        return data.detail;
+      }
+    } catch (error) {
+      /* non-JSON error body */
+    }
+    return "请求失败，请稍后重试（" + response.status + "）";
+  }
+
+  async function send() {
+    if (streaming) {
+      return;
+    }
+
+    var text = inputEl.value.trim();
+    if (!text) {
+      inputEl.focus();
+      return;
+    }
+
+    messages.push({ role: "user", content: text });
+    addBubble("user", text);
+    inputEl.value = "";
+
+    var bubble = addBubble("assistant", "");
+    bubble.classList.add("streaming");
+    var state = { text: "", done: false, trimmed: false, error: "", bubble: bubble };
+
+    setBusy(true);
+    setStatus("正在回复…");
+
+    try {
+      var response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: messages })
+      });
+
+      if (!response.ok) {
+        state.error = await readError(response);
+      } else if (!response.body) {
+        state.error = "当前浏览器不支持流式响应";
+      } else {
+        var reader = response.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = "";
+
+        while (!state.done && !state.error) {
+          var result = await reader.read();
+          if (result.done) {
+            break;
+          }
+          buffer += decoder.decode(result.value, { stream: true });
+
+          var index;
+          while (!state.error && (index = buffer.indexOf("\n\n")) !== -1) {
+            var frame = buffer.slice(0, index);
+            buffer = buffer.slice(index + 2);
+            applyFrame(frame, state);
+          }
+        }
+
+        buffer += decoder.decode();
+        if (!state.error && buffer.trim()) {
+          applyFrame(buffer, state);
+        }
+        if (state.error) {
+          try {
+            await reader.cancel();
+          } catch (error) {
+            /* already closed */
+          }
+        }
+      }
+    } catch (error) {
+      state.error = "网络异常，请检查连接后重试";
+    }
+
+    bubble.classList.remove("streaming");
+
+    if (state.error) {
+      if (!state.text) {
+        bubble.remove();
+      }
+      setStatus(state.error);
+    } else if (!state.done) {
+      if (!state.text) {
+        bubble.remove();
+      }
+      setStatus("回复中断，请重试");
+    } else if (state.text.trim()) {
+      messages.push({ role: "assistant", content: state.text });
+      setStatus(state.trimmed ? "历史已按 token 预算裁剪" : "");
+    } else {
+      bubble.remove();
+      setStatus("模型未返回内容，请重试");
+    }
+
+    setBusy(false);
+    inputEl.focus();
+  }
+
+  formEl.addEventListener("submit", function (event) {
+    event.preventDefault();
+    send();
+  });
+
+  inputEl.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      send();
+    }
+  });
+
+  clearBtn.addEventListener("click", function () {
+    if (streaming) {
+      return;
+    }
+    messages = [];
+    Array.prototype.slice.call(messagesEl.querySelectorAll(".bubble")).forEach(function (bubble) {
+      bubble.remove();
+    });
+    emptyEl.hidden = false;
+    setStatus("");
+    inputEl.value = "";
+    inputEl.focus();
+  });
+})();
+</script>
+</body>
+</html>

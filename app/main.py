@@ -1,7 +1,8 @@
 import logging
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from langchain_core.language_models import BaseChatModel
 
 from app.config import Settings, get_settings
@@ -12,7 +13,14 @@ from app.services.extract import extract_after_sales
 
 logger = logging.getLogger(__name__)
 
+STATIC_DIR = Path(__file__).parent / "static"
+
 app = FastAPI(title="电商智能客服")
+
+
+@app.get("/", response_class=FileResponse)
+def index() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")
