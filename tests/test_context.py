@@ -58,3 +58,31 @@ def test_zero_budget_keeps_only_latest():
     result = trim_history(messages, max_tokens=0, token_counter=char_counter)
     assert result.messages == [messages[-1]]
     assert result.trimmed is True
+
+
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+from app.services.context import repair_tool_pairs
+
+
+def test_repair_tool_pairs_drops_orphans():
+    orphan_tool = ToolMessage(content="x", tool_call_id="missing")
+    orphan_ai = AIMessage(
+        content="",
+        tool_calls=[{"name": "query_logistics", "args": {}, "id": "lost", "type": "tool_call"}],
+    )
+    valid_ai = AIMessage(
+        content="",
+        tool_calls=[{"name": "query_logistics", "args": {}, "id": "ok", "type": "tool_call"}],
+    )
+    valid_tool = ToolMessage(content="ok", tool_call_id="ok")
+    messages = [
+        HumanMessage(content="q"),
+        orphan_ai,
+        orphan_tool,
+        valid_ai,
+        valid_tool,
+        AIMessage(content="a"),
+    ]
+    repaired = repair_tool_pairs(messages)
+    assert repaired == [messages[0], valid_ai, valid_tool, messages[-1]]
