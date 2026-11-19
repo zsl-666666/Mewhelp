@@ -90,6 +90,10 @@ async def test_execute_stream_validation_error_does_not_retry():
     assert [event.status for event in events] == ["started", "failed"]
     assert events[-1].result.error_code == "validation_error"
     assert events[-1].result.attempts == 0
+    assert json.loads(events[-1].result.content) == {
+        "ok": False,
+        "error": "参数校验失败",
+    }
 
 
 async def test_execute_stream_timeout_retries_then_timeout():
@@ -107,6 +111,10 @@ async def test_execute_stream_timeout_retries_then_timeout():
     ]
     assert events[-1].result.error_code == "timeout"
     assert events[-1].result.attempts == 3
+    assert json.loads(events[-1].result.content) == {
+        "ok": False,
+        "error": "工具执行超时",
+    }
 
 
 async def test_execute_stream_non_retryable_fails_once():
@@ -122,6 +130,10 @@ async def test_execute_stream_non_retryable_fails_once():
     assert [event.status for event in events] == ["started", "failed"]
     assert events[-1].result.error_code == "execution_error"
     assert events[-1].result.attempts == 1
+    assert json.loads(events[-1].result.content) == {
+        "ok": False,
+        "error": "工具执行失败",
+    }
 
 
 async def test_unknown_tool_fails_without_retry():
@@ -137,6 +149,10 @@ async def test_unknown_tool_fails_without_retry():
     assert [event.status for event in events] == ["started", "failed"]
     assert events[-1].result.error_code == "unknown_tool"
     assert events[-1].result.attempts == 0
+    assert json.loads(events[-1].result.content) == {
+        "ok": False,
+        "error": "未知工具: missing",
+    }
 
 
 async def test_injected_arg_hidden_from_model_schema():

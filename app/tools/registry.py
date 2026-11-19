@@ -267,7 +267,9 @@ class ToolRegistry:
         if result is None:
             return ToolExecutionResult(
                 ok=False,
-                content="",
+                content=json.dumps(
+                    {"ok": False, "error": "工具执行失败"}, ensure_ascii=False
+                ),
                 error="工具执行失败",
                 error_code="internal_error",
             )
@@ -366,7 +368,9 @@ class ToolRegistry:
             error=error,
             result=ToolExecutionResult(
                 ok=False,
-                content="",
+                content=json.dumps(
+                    {"ok": False, "error": error}, ensure_ascii=False
+                ),
                 error=error,
                 error_code=error_code,
                 retryable=retryable,

@@ -233,7 +233,9 @@ async def stream_chat(
         if result is None:
             result = ToolExecutionResult(
                 ok=False,
-                content="",
+                content=json.dumps(
+                    {"ok": False, "error": "工具执行失败"}, ensure_ascii=False
+                ),
                 error="工具执行失败",
                 error_code="internal_error",
             )
@@ -252,9 +254,10 @@ async def stream_chat(
                 pending_text += text
                 yield format_sse({"delta": text})
 
-        if pending_text:
-            await asyncio.to_thread(persist_assistant, pending_text)
-            pending_text = ""
+        # 工具路径始终落一条最终 assistant 行（空文本时 content 为 None），
+        # 保证成功的工具轮次固定是 user/assistant/tool/assistant 四行。
+        await asyncio.to_thread(persist_assistant, pending_text)
+        pending_text = ""
 
         yield format_sse(
             {
