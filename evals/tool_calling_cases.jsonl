@@ -1,0 +1,10 @@
+{"question": "订单 1001 的物流到哪了", "expected_tool": "query_logistics", "expected_args": {"order_id": "1001"}}
+{"question": "帮我查订单 1001", "expected_tool": "query_order", "expected_args": {"order_id": "1001"}}
+{"question": "商品 P100 还有货吗", "expected_tool": "query_product", "expected_args": {"product_id": "P100"}}
+{"question": "退货政策是什么", "expected_tool": "query_faq", "expected_args": {"keyword": "退货政策"}}
+{"question": "邮费是多少", "expected_tool": "query_faq", "expected_args": {"keyword": "邮费"}}
+{"question": "我要人工投诉，订单 1001 一直不发货", "expected_tool": "create_ticket", "expected_args": {"ticket_type": "投诉"}}
+{"question": "帮我转人工处理退货", "expected_tool": "create_ticket", "expected_args": {"ticket_type": "售后"}}
+{"question": "我要人工咨询发票问题", "expected_tool": "create_ticket", "expected_args": {"ticket_type": "咨询"}}
+{"question": "订单 1002 的快递怎么还没到", "expected_tool": "query_logistics", "expected_args": {"order_id": "1002"}}
+{"question": "帮我看看订单 1003 的状态", "expected_tool": "query_order", "expected_args": {"order_id": "1003"}}
