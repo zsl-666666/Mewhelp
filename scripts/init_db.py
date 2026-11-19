@@ -5,7 +5,7 @@
     uv run python -m scripts.init_db
 
 只读 ``db/schema.sql`` 建表，表为空时灌入种子 FAQ。
-已有任意表时只跳过，绝不自动补建或删表。
+四张表齐全时跳过；结构不完整直接报错，不会自动补建或删表。
 """
 
 from __future__ import annotations
@@ -76,7 +76,10 @@ def main() -> int:
         seeded = seed_faq(session)
 
     print(f"表结构：{state}")
-    print(f"FAQ 种子：{seeded} 条")
+    if seeded:
+        print(f"FAQ 种子：写入 {seeded} 条")
+    else:
+        print("FAQ 种子：已存在，跳过写入")
     return 0
 
 
