@@ -22,3 +22,16 @@ def test_after_sales_prompt_lists_all_request_types():
     for value in ("退款", "退货", "换货", "维修", "物流", "咨询", "其他"):
         assert value in AFTER_SALES_SYSTEM_PROMPT
     assert "禁止猜测" in AFTER_SALES_SYSTEM_PROMPT
+
+
+from app.prompts.customer_service import TOOL_USAGE_RULES
+
+
+def test_tool_usage_rules_pin_single_call_and_faq_keyword():
+    assert "只调用一个工具" in TOOL_USAGE_RULES
+    assert "邮费" in TOOL_USAGE_RULES
+    assert "运费" in TOOL_USAGE_RULES
+    assert "不要改写" in TOOL_USAGE_RULES
+    assert "create_ticket" in TOOL_USAGE_RULES
+    for value in ("售后", "投诉", "咨询"):
+        assert value in TOOL_USAGE_RULES
