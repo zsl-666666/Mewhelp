@@ -5,13 +5,21 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import Settings, get_settings
+from app.db import get_db_session_factory
 from app.llm import get_chat_model
+from app.repositories.conversations import (
+    append_message,
+    create_conversation,
+    get_conversation,
+)
 from app.schemas import AfterSalesExtraction, AfterSalesRequest, ChatRequest
 from app.services.chat import stream_chat
 from app.services.extract import extract_after_sales
+from app.tools import build_tool_registry
+from app.tools.registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -38,15 +46,44 @@ def health(settings: Settings = Depends(get_settings)) -> dict[str, str]:
     return {"status": "ok", "model": settings.llm_model}
 
 
+def get_tool_registry(
+    session_factory: sessionmaker[Session] = Depends(get_db_session_factory),
+) -> ToolRegistry:
+    return build_tool_registry(session_factory)
+
+
 @app.post("/api/chat")
 async def chat(
     request: ChatRequest,
     model: BaseChatModel = Depends(get_chat_model),
     settings: Settings = Depends(get_settings),
+    session_factory: sessionmaker[Session] = Depends(get_db_session_factory),
+    registry: ToolRegistry = Depends(get_tool_registry),
 ):
-    history = [HumanMessage(content=request.message)]
+    with session_factory() as session:
+        if request.conversation_id is not None:
+            conversation = get_conversation(session, request.conversation_id)
+            if conversation is None:
+                raise HTTPException(status_code=404, detail="会话不存在")
+        else:
+            conversation = create_conversation(session, request.user_id)
+        append_message(
+            session,
+            conversation.id,
+            role="user",
+            content=request.message,
+        )
+        conversation_id = conversation.id
+
     return StreamingResponse(
-        stream_chat(history, model, settings),
+        stream_chat(
+            conversation_id=conversation_id,
+            user_id=request.user_id,
+            session_factory=session_factory,
+            registry=registry,
+            model=model,
+            settings=settings,
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
