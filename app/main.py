@@ -5,11 +5,12 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
 
 from app.config import Settings, get_settings
 from app.llm import get_chat_model
 from app.schemas import AfterSalesExtraction, AfterSalesRequest, ChatRequest
-from app.services.chat import stream_chat, to_lc_message
+from app.services.chat import stream_chat
 from app.services.extract import extract_after_sales
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ async def chat(
     model: BaseChatModel = Depends(get_chat_model),
     settings: Settings = Depends(get_settings),
 ):
-    history = [to_lc_message(message) for message in request.messages]
+    history = [HumanMessage(content=request.message)]
     return StreamingResponse(
         stream_chat(history, model, settings),
         media_type="text/event-stream",

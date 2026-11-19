@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +22,10 @@ class Settings(BaseSettings):
     structured_output_method: Literal[
         "function_calling", "json_schema"
     ] = "function_calling"
+    tool_timeout_seconds: float = Field(default=5.0, gt=0)
+    tool_max_retries: int = Field(default=2, ge=0)
+    tool_retry_delay_seconds: float = Field(default=0.2, ge=0)
+    tool_result_max_chars: int = Field(default=4000, gt=0)
     company_name: str = "好物商城"
     service_hours: str = "9:00-21:00"
     return_window_days: int = 7

@@ -3,21 +3,14 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage
 
 from app.config import Settings
 from app.prompts.customer_service import build_customer_service_prompt
-from app.schemas import ChatMessage
 from app.services.context import trim_history
 from app.sse import format_sse
 
 logger = logging.getLogger(__name__)
-
-
-def to_lc_message(message: ChatMessage) -> BaseMessage:
-    if message.role == "user":
-        return HumanMessage(content=message.content)
-    return AIMessage(content=message.content)
 
 
 def extract_text(chunk: Any) -> str:

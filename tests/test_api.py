@@ -14,7 +14,7 @@ def test_chat_returns_sse_stream(client):
     with client.stream(
         "POST",
         "/api/chat",
-        json={"messages": [{"role": "user", "content": "你好"}]},
+        json={"user_id": "u1", "message": "你好"},
     ) as response:
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/event-stream")
@@ -26,15 +26,10 @@ def test_chat_returns_sse_stream(client):
     assert 'data: {"done": true, "trimmed": false}' in body
 
 
-def test_chat_rejects_trailing_assistant(client):
+def test_chat_rejects_blank_message(client):
     response = client.post(
         "/api/chat",
-        json={
-            "messages": [
-                {"role": "user", "content": "你好"},
-                {"role": "assistant", "content": "您好"},
-            ]
-        },
+        json={"user_id": "u1", "message": "   "},
     )
     assert response.status_code == 422
 

@@ -20,6 +20,17 @@ def test_settings_defaults(monkeypatch):
     assert settings.structured_output_method == "function_calling"
 
 
+def test_tool_settings_defaults(monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.com/v1")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    settings = Settings(_env_file=None)
+    assert settings.tool_timeout_seconds == 5.0
+    assert settings.tool_max_retries == 2
+    assert settings.tool_retry_delay_seconds == 0.2
+    assert settings.tool_result_max_chars == 4000
+
+
 def test_missing_required_settings_raises(monkeypatch):
     for key in ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"):
         monkeypatch.delenv(key, raising=False)

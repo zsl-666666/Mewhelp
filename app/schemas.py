@@ -1,31 +1,21 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
-ChatRole = Literal["user", "assistant"]
 RequestType = Literal["退款", "退货", "换货", "维修", "物流", "咨询", "其他"]
 
 
-class ChatMessage(BaseModel):
-    role: ChatRole
-    content: str = Field(min_length=1)
-
-    @field_validator("content")
-    @classmethod
-    def content_must_not_be_blank(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("content must not be blank")
-        return value
-
-
 class ChatRequest(BaseModel):
-    messages: list[ChatMessage] = Field(min_length=1)
+    user_id: str = Field(default="demo-user", min_length=1, max_length=64)
+    conversation_id: int | None = Field(default=None, gt=0)
+    message: str = Field(min_length=1)
 
-    @model_validator(mode="after")
-    def last_message_must_be_user(self) -> "ChatRequest":
-        if self.messages[-1].role != "user":
-            raise ValueError("the last message must be from the user")
-        return self
+    @field_validator("user_id", "message")
+    @classmethod
+    def must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("must not be blank")
+        return value
 
 
 class AfterSalesRequest(BaseModel):

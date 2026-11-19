@@ -5,18 +5,8 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
-from app.schemas import ChatMessage
-from app.services.chat import extract_text, stream_chat, to_lc_message
+from app.services.chat import extract_text, stream_chat
 from tests.fakes import FakeStreamModel, make_settings
-
-
-def test_to_lc_message_maps_roles():
-    user_message = to_lc_message(ChatMessage(role="user", content="你好"))
-    assistant_message = to_lc_message(ChatMessage(role="assistant", content="您好"))
-    assert isinstance(user_message, HumanMessage)
-    assert user_message.content == "你好"
-    assert isinstance(assistant_message, AIMessage)
-    assert assistant_message.content == "您好"
 
 
 async def test_stream_chat_passes_system_prompt_and_trimmed_history():
