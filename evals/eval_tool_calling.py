@@ -35,6 +35,8 @@ def score_tool_call(
     if first.get("name") != expected_tool:
         return False
     actual_args = first.get("args") or {}
+    if not isinstance(actual_args, dict):
+        return False
     return all(
         key in actual_args and actual_args[key] == value
         for key, value in expected_args.items()
