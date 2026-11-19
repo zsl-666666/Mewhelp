@@ -77,7 +77,28 @@
     color: #0f172a;
     border-bottom-left-radius: 4px;
   }
-  .bubble.assistant.streaming:empty::after {
+  .tool-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .tool-badges:empty { display: none; }
+  .tool-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.6;
+    background: #e2e8f0;
+    color: #475569;
+  }
+  .tool-badge.running,
+  .tool-badge.retrying { background: #fef3c7; color: #92400e; }
+  .tool-badge.completed { background: #dcfce7; color: #166534; }
+  .tool-badge.timeout,
+  .tool-badge.failed { background: #fee2e2; color: #991b1b; }
+  .bubble.assistant.streaming .bubble-text:empty::after {
     content: "…";
     color: #64748b;
   }
@@ -150,7 +171,7 @@
   var sendBtn = document.getElementById("send");
   var clearBtn = document.getElementById("clear");
 
-  var messages = [];
+  var conversationId = null;
   var streaming = false;
 
   function setStatus(text) {
@@ -165,16 +186,64 @@
     emptyEl.hidden = true;
     var bubble = document.createElement("div");
     bubble.className = "bubble " + role;
+
+    if (role === "assistant") {
+      var badges = document.createElement("div");
+      badges.className = "tool-badges";
+      var body = document.createElement("div");
+      body.className = "bubble-text";
+      body.textContent = text || "";
+      bubble.appendChild(badges);
+      bubble.appendChild(body);
+      messagesEl.appendChild(bubble);
+      scrollToBottom();
+      return { bubble: bubble, badges: badges, body: body };
+    }
+
     bubble.textContent = text || "";
     messagesEl.appendChild(bubble);
     scrollToBottom();
-    return bubble;
+    return { bubble: bubble };
   }
 
   function setBusy(busy) {
     streaming = busy;
     sendBtn.disabled = busy;
     clearBtn.disabled = busy;
+  }
+
+  function applyToolFrame(payload, state) {
+    var key = typeof payload.tool_call_id === "string" && payload.tool_call_id
+      ? payload.tool_call_id
+      : "name:" + (payload.name || "");
+    var label = typeof payload.label === "string" && payload.label
+      ? payload.label
+      : (payload.name || "工具");
+    var status = typeof payload.status === "string" ? payload.status : "";
+    var badge = state.badges[key];
+
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "tool-badge";
+      state.badges[key] = badge;
+      state.badgesEl.appendChild(badge);
+    }
+
+    badge.className = "tool-badge " + status;
+    if (status === "running") {
+      badge.textContent = "正在" + label + "…";
+    } else if (status === "retrying") {
+      badge.textContent = label + "重试中（" + payload.attempt + "/" + payload.max_attempts + "）…";
+    } else if (status === "completed") {
+      badge.textContent = label;
+    } else if (status === "timeout") {
+      badge.textContent = label + "超时";
+    } else if (status === "failed") {
+      badge.textContent = label + "失败";
+    } else {
+      badge.textContent = label;
+    }
+    scrollToBottom();
   }
 
   function applyFrame(frame, state) {
@@ -214,9 +283,21 @@
       return;
     }
 
+    if (eventName === "meta") {
+      if (typeof payload.conversation_id === "number") {
+        conversationId = payload.conversation_id;
+      }
+      return;
+    }
+
+    if (eventName === "tool") {
+      applyToolFrame(payload, state);
+      return;
+    }
+
     if (typeof payload.delta === "string") {
       state.text += payload.delta;
-      state.bubble.textContent = state.text;
+      state.textEl.textContent = state.text;
       scrollToBottom();
     }
 
@@ -249,13 +330,22 @@
       return;
     }
 
-    messages.push({ role: "user", content: text });
     addBubble("user", text);
     inputEl.value = "";
 
-    var bubble = addBubble("assistant", "");
+    var view = addBubble("assistant", "");
+    var bubble = view.bubble;
     bubble.classList.add("streaming");
-    var state = { text: "", done: false, trimmed: false, error: "", bubble: bubble };
+    var state = {
+      text: "",
+      done: false,
+      trimmed: false,
+      error: "",
+      bubble: bubble,
+      textEl: view.body,
+      badgesEl: view.badges,
+      badges: {}
+    };
 
     setBusy(true);
     setStatus("正在回复…");
@@ -264,10 +354,17 @@
       var response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: messages })
+        body: JSON.stringify({
+          user_id: "demo-user",
+          conversation_id: conversationId,
+          message: text
+        })
       });
 
-      if (!response.ok) {
+      if (response.status === 404) {
+        conversationId = null;
+        state.error = "会话已失效，请重新发送";
+      } else if (!response.ok) {
         state.error = await readError(response);
       } else if (!response.body) {
         state.error = "当前浏览器不支持流式响应";
@@ -309,19 +406,22 @@
 
     bubble.classList.remove("streaming");
 
+    var hasBadges = Object.keys(state.badges).length > 0;
+
     if (state.error) {
-      if (!state.text) {
+      if (!state.text && !hasBadges) {
         bubble.remove();
       }
       setStatus(state.error);
     } else if (!state.done) {
-      if (!state.text) {
+      if (!state.text && !hasBadges) {
         bubble.remove();
       }
       setStatus("回复中断，请重试");
     } else if (state.text.trim()) {
-      messages.push({ role: "assistant", content: state.text });
       setStatus(state.trimmed ? "历史已按 token 预算裁剪" : "");
+    } else if (hasBadges) {
+      setStatus("");
     } else {
       bubble.remove();
       setStatus("模型未返回内容，请重试");
@@ -347,7 +447,7 @@
     if (streaming) {
       return;
     }
-    messages = [];
+    conversationId = null;
     Array.prototype.slice.call(messagesEl.querySelectorAll(".bubble")).forEach(function (bubble) {
       bubble.remove();
     });
