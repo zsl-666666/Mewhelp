@@ -53,7 +53,7 @@ def get_tool_registry(
 
 
 @app.post("/api/chat")
-async def chat(
+def chat(
     request: ChatRequest,
     model: BaseChatModel = Depends(get_chat_model),
     settings: Settings = Depends(get_settings),

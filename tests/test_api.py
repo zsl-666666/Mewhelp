@@ -11,7 +11,12 @@ from app.main import app, get_tool_registry
 from app.models import Conversation, Message
 from app.repositories.conversations import append_message, create_conversation
 from app.tools.registry import ToolRegistry
-from tests.fakes import FakeToolCallModel, FakeStructuredModel, make_settings
+from tests.fakes import (
+    FakeStreamModel,
+    FakeStructuredModel,
+    FakeToolCallModel,
+    make_settings,
+)
 
 
 def override_model(model):
@@ -33,10 +38,15 @@ def test_chat_creates_conversation_and_returns_meta(client, session_factory):
         json={"user_id": "u1", "message": "你好"},
     ) as response:
         assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/event-stream")
+        assert response.headers["cache-control"] == "no-cache"
+        assert response.headers["connection"] == "keep-alive"
+        assert response.headers["x-accel-buffering"] == "no"
         body = "".join(response.iter_text())
 
     assert "event: meta" in body
     assert '"conversation_id": 1' in body
+    assert '"trimmed": false' in body
     assert '"done": true' in body
     with session_factory() as session:
         convo = session.scalar(select(Conversation))
@@ -85,6 +95,27 @@ def test_chat_rejects_old_messages_payload_and_blank_message(client, session_fac
     blank = client.post("/api/chat", json={"user_id": "u1", "message": "   "})
     assert old.status_code == 422
     assert blank.status_code == 422
+
+
+def test_chat_upstream_failure_emits_error_frame_and_keeps_user_message(
+    client, session_factory
+):
+    app.dependency_overrides[get_db_session_factory] = lambda: session_factory
+    # 空注册表让模型无需 bind_tools，直接覆盖上游模型抛错路径。
+    app.dependency_overrides[get_tool_registry] = lambda: ToolRegistry()
+    override_model(FakeStreamModel([], error_after=0))
+    response = client.post(
+        "/api/chat",
+        json={"user_id": "u1", "message": "你好"},
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert "event: error" in body
+    assert "upstream_error" in body
+    with session_factory() as session:
+        rows = session.scalars(select(Message).order_by(Message.id)).all()
+    assert [row.role for row in rows] == ["user"]
+    assert rows[0].content == "你好"
 
 
 def test_chat_tool_completed_frame(client, session_factory):
@@ -181,6 +212,7 @@ def test_chat_tool_failure_frame(client, session_factory):
 
     assert '"status": "failed"' in body
     assert '"error_code": "execution_error"' in body
+    assert '"tool_calls": ["broken_logistics"]' in body
     assert "event: error" not in body
 
 
